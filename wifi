@@ -2,6 +2,11 @@
 import subprocess
 import os
 
+# ==================== CONFIG ====================
+# Each network should already have a saved password on the device
+# Order based on priority, first network is highest priority
+NETWORKS = ["705 Markham Unit 304", "Daniel's Pixel 7"]
+
 def filter_nearby_networks(network_list):
     code, output = subprocess.getstatusoutput("sudo iwctl station wlan0 get-networks")
 
@@ -49,8 +54,7 @@ def req_addr():
         exit(1)
 
 def main():
-    # Each network should already have a saved password on the device
-    networks = ["Daniel's Pixel 7", "705 Markham Unit 304"]
+    networks = NETWORKS
 
     # make sure to start iwd
     code = os.system("sudo systemctl start iwd")

@@ -53,14 +53,17 @@ def req_addr():
         print("Fatal: Error running DHCP client")
         exit(1)
 
-def main():
-    networks = NETWORKS
-
-    # make sure to start iwd
+def init_iwd():
     code = os.system("sudo systemctl start iwd")
     if code != 0:
         print("Fatal: Error starting iwd")
         return
+
+
+def main():
+    networks = NETWORKS
+
+    init_iwd()
     
     near_networks = filter_nearby_networks(networks)
 

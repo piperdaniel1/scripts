@@ -1,0 +1,98 @@
+#!/bin/python
+import subprocess
+import os
+
+def filter_nearby_networks(network_list):
+    code, output = subprocess.getstatusoutput("sudo iwctl station wlan0 get-networks")
+
+    if code != 0:
+        print("Fatal: Error getting networks")
+        exit(1)
+
+    networks = [network for network in network_list if network in output]
+
+    return networks
+
+def is_curr_connected():
+    code, output = subprocess.getstatusoutput("sudo iwctl station wlan0 show")
+    if code != 0:
+        print("Fatal: Error showing wlan0")
+        exit(1)
+    
+    if "disconnected" in output:
+        return False, None
+
+    try:
+        network = ' '.join([word for word in output.splitlines()[6].split(' ') if word != ''][2:]).strip()
+    except:
+        print("Fatal: Error getting network, did the iwctl station wlan0 show format change?")
+        exit(1)
+
+    return True, network
+
+def connect(network):
+    code, output = subprocess.getstatusoutput('sudo iwctl station wlan0 connect "' + network + '"')
+
+    return code == 0
+
+def disconnect():
+    code, output = subprocess.getstatusoutput("sudo iwctl station wlan0 disconnect")
+    if code != 0:
+        print("Fatal: Error disconnecting from network")
+        exit(1)
+
+def req_addr():
+    code, output = subprocess.getstatusoutput("sudo dhcpcd")
+
+    if code != 0:
+        print("Fatal: Error running DHCP client")
+        exit(1)
+
+def main():
+    # Each network should already have a saved password on the device
+    networks = ["Daniel's Pixel 7", "705 Markham Unit 304"]
+
+    # make sure to start iwd
+    code = os.system("sudo systemctl start iwd")
+    if code != 0:
+        print("Fatal: Error starting iwd")
+        return
+    
+    near_networks = filter_nearby_networks(networks)
+
+    is_conn, network = is_curr_connected()
+    if is_conn:
+        if network in networks:
+            req_addr()
+            print("You are already connected to a preferred network.")
+            return 0
+        disconnect()
+
+    if len(near_networks) == 0:
+        print("No preferred networks nearby.")
+        return 0
+
+    connected = False
+    for network in near_networks:
+        connected = connect(network)
+        if connected:
+            break
+        print("Could not connect to", network)
+
+    if not connected:
+        print("Fatal: Could not connect to any nearby preferred networks")
+        return 1
+
+    req_addr()
+    
+    is_conn, network = is_curr_connected()
+    if not is_conn:
+        print("Fatal: Network disconnected immediately")
+        exit(1)
+
+    print("You are now connected to", network)
+
+    return 0
+
+if __name__ == "__main__":
+    main()
